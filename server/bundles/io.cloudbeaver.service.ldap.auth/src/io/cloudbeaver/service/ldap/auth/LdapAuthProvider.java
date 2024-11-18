@@ -81,7 +81,7 @@ public class LdapAuthProvider implements SMAuthProviderExternal<SMSession>, SMBr
             fullUserDN = String.join(",", fullUserDN, ldapSettings.getBaseDN());
         }
 
-        validateUserAccess(userName, ldapSettings.getBaseDN(), ldapSettings);
+        fullUserDN = validateUserAccess(userName, ldapSettings.getBaseDN(), ldapSettings);
 
         environment.put(Context.SECURITY_PRINCIPAL, fullUserDN);
         environment.put(Context.SECURITY_CREDENTIALS, password);
@@ -105,13 +105,13 @@ public class LdapAuthProvider implements SMAuthProviderExternal<SMSession>, SMBr
         }
     }
 
-    private void validateUserAccess(@NotNull String userName, @NotNull String fullUserDN, @NotNull LdapSettings ldapSettings) throws DBException {
+    private String validateUserAccess(@NotNull String userName, @NotNull String fullUserDN, @NotNull LdapSettings ldapSettings) throws DBException {
         if (
             CommonUtils.isEmpty(ldapSettings.getFilter())
                 || CommonUtils.isEmpty(ldapSettings.getBindUserDN())
                 || CommonUtils.isEmpty(ldapSettings.getBindUserPassword())
         ) {
-            return;
+            return "";
         }
 
         var environment = creteAuthEnvironment(ldapSettings);
@@ -129,6 +129,7 @@ public class LdapAuthProvider implements SMAuthProviderExternal<SMSession>, SMBr
             if (!searchResult.hasMore()) {
                 throw new DBException("Access denied");
             }
+            return searchResult.nextElement().getNameInNamespace();
         } catch (DBException e) {
             throw e;
         } catch (Exception e) {
