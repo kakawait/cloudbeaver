@@ -81,7 +81,7 @@ public class LdapAuthProvider implements SMAuthProviderExternal<SMSession>, SMBr
             fullUserDN = String.join(",", fullUserDN, ldapSettings.getBaseDN());
         }
 
-        validateUserAccess(fullUserDN, ldapSettings);
+        validateUserAccess(userName, fullUserDN, ldapSettings);
 
         environment.put(Context.SECURITY_PRINCIPAL, fullUserDN);
         environment.put(Context.SECURITY_CREDENTIALS, password);
@@ -105,7 +105,7 @@ public class LdapAuthProvider implements SMAuthProviderExternal<SMSession>, SMBr
         }
     }
 
-    private void validateUserAccess(@NotNull String fullUserDN, @NotNull LdapSettings ldapSettings) throws DBException {
+    private void validateUserAccess(@NotNull String userName, @NotNull String fullUserDN, @NotNull LdapSettings ldapSettings) throws DBException {
         if (
             CommonUtils.isEmpty(ldapSettings.getFilter())
                 || CommonUtils.isEmpty(ldapSettings.getBindUserDN())
@@ -124,7 +124,8 @@ public class LdapAuthProvider implements SMAuthProviderExternal<SMSession>, SMBr
             SearchControls searchControls = new SearchControls();
             searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
             searchControls.setTimeLimit(30_000);
-            var searchResult = bindUserContext.search(fullUserDN, ldapSettings.getFilter(), searchControls);
+            Object[] params = {userName};
+            var searchResult = bindUserContext.search(fullUserDN, ldapSettings.getFilter(), params, searchControls);
             if (!searchResult.hasMore()) {
                 throw new DBException("Access denied");
             }
