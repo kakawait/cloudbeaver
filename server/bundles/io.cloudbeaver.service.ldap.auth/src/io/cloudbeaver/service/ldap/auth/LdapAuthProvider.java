@@ -81,7 +81,7 @@ public class LdapAuthProvider implements SMAuthProviderExternal<SMSession>, SMBr
             fullUserDN = String.join(",", fullUserDN, ldapSettings.getBaseDN());
         }
 
-        validateUserAccess(userName, fullUserDN, ldapSettings);
+        validateUserAccess(userName, ldapSettings.getBaseDN(), ldapSettings);
 
         environment.put(Context.SECURITY_PRINCIPAL, fullUserDN);
         environment.put(Context.SECURITY_CREDENTIALS, password);
