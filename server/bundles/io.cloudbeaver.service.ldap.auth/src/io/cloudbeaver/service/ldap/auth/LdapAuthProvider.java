@@ -91,6 +91,12 @@ public class LdapAuthProvider implements SMAuthProviderExternal<SMSession>, SMBr
             Map<String, Object> userData = new HashMap<>();
             userData.put(LdapConstants.CRED_USERNAME, findUserNameFromDN(fullUserDN, ldapSettings));
             userData.put(LdapConstants.CRED_SESSION_ID, UUID.randomUUID());
+            userData.put("fullName", "Thibaud LEPRETRE0");
+            userData.put("displayName", "Thibaud LEPRETRE1");
+            userData.put("firstName", "Thibaud0");
+            userData.put("firstname", "Thibaud1");
+            userData.put("lastName", "LEPRETRE0");
+            userData.put("lastname", "LEPRETRE");
             return userData;
         } catch (Exception e) {
             throw new DBException("LDAP authentication failed: " + e.getMessage(), e);
