@@ -39,9 +39,12 @@ import javax.naming.NamingException;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
+import javax.naming.directory.SearchResult;
+
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 public class LdapAuthProvider implements SMAuthProviderExternal<SMSession>, SMBruteForceProtected {
@@ -81,7 +84,9 @@ public class LdapAuthProvider implements SMAuthProviderExternal<SMSession>, SMBr
             fullUserDN = String.join(",", fullUserDN, ldapSettings.getBaseDN());
         }
 
-        fullUserDN = validateUserAccess(userName, ldapSettings.getBaseDN(), ldapSettings);
+        SearchResult result = validateUserAccess(userName, ldapSettings.getBaseDN(), ldapSettings).orElseThrow(
+                () -> new DBException("LDAP user is missing"));
+        fullUserDN = result.getNameInNamespace();
 
         environment.put(Context.SECURITY_PRINCIPAL, fullUserDN);
         environment.put(Context.SECURITY_CREDENTIALS, password);
@@ -89,7 +94,7 @@ public class LdapAuthProvider implements SMAuthProviderExternal<SMSession>, SMBr
         try {
             context = new InitialDirContext(environment);
             Map<String, Object> userData = new HashMap<>();
-            userData.put(LdapConstants.CRED_USERNAME, findUserNameFromDN(fullUserDN, ldapSettings));
+            userData.put(LdapConstants.CRED_USERNAME, result.getAttributes().get("uid").get().toString().toLowerCase());
             userData.put(LdapConstants.CRED_SESSION_ID, UUID.randomUUID());
             return userData;
         } catch (Exception e) {
@@ -105,13 +110,13 @@ public class LdapAuthProvider implements SMAuthProviderExternal<SMSession>, SMBr
         }
     }
 
-    private String validateUserAccess(@NotNull String userName, @NotNull String fullUserDN, @NotNull LdapSettings ldapSettings) throws DBException {
+    private Optional<SearchResult> validateUserAccess(@NotNull String userName, @NotNull String fullUserDN, @NotNull LdapSettings ldapSettings) throws DBException {
         if (
             CommonUtils.isEmpty(ldapSettings.getFilter())
                 || CommonUtils.isEmpty(ldapSettings.getBindUserDN())
                 || CommonUtils.isEmpty(ldapSettings.getBindUserPassword())
         ) {
-            return "";
+            return Optional.empty();
         }
 
         var environment = creteAuthEnvironment(ldapSettings);
@@ -129,7 +134,7 @@ public class LdapAuthProvider implements SMAuthProviderExternal<SMSession>, SMBr
             if (!searchResult.hasMore()) {
                 throw new DBException("Access denied");
             }
-            return searchResult.nextElement().getNameInNamespace();
+            return Optional.ofNullable(searchResult.nextElement());
         } catch (DBException e) {
             throw e;
         } catch (Exception e) {
